@@ -28,45 +28,28 @@ npm run dev
 
 ## Deployment with Docker
 
-The app is containerized using a multi-stage Dockerfile: it builds the static site with Node.js, then serves the output with Nginx (`-alpine-slim` image) over HTTPS. Plain HTTP requests are redirected to HTTPS.
+The app is containerized using a multi-stage Dockerfile: it builds the static site with Node.js, then serves the output with Nginx (`-alpine-slim` image).
 
-### 1. Provide a TLS certificate
-
-Nginx expects `certs/server.crt` and `certs/server.key` (mounted into the container at `/etc/nginx/certs`).
-
-For local development/testing, generate a self-signed certificate:
-
-```bash
-./scripts/generate-self-signed-cert.sh
-```
-
-For production, replace `certs/server.crt` / `certs/server.key` with a certificate from a real CA (e.g. Let's Encrypt) or mount them from your secrets manager. The `certs/` directory is git-ignored and never baked into the image.
-
-### 2. Build and run with Docker
+### Build and run with Docker
 
 ```bash
 docker build -t password-generator .
-docker run -d \
-  -p 8080:80 -p 8443:443 \
-  -v "$(pwd)/certs:/etc/nginx/certs:ro" \
-  --name password-generator password-generator
+docker run -d -p 8080:80 --name password-generator password-generator
 ```
 
-The app will be available at [https://localhost:8443](https://localhost:8443) (HTTP on 8080 redirects to HTTPS). Since the dev cert is self-signed, your browser will show a trust warning — this is expected.
+The app will be available at [http://localhost:8080](http://localhost:8080).
 
-### 3. Build and run with Docker Compose
+### Build and run with Docker Compose
 
 ```bash
 docker compose up -d --build
 ```
 
-This starts the app on [https://localhost:8443](https://localhost:8443) with HTTP on `8080` redirecting to HTTPS. To stop it:
+This starts the app on [http://localhost:8080](http://localhost:8080). To stop it:
 
 ```bash
 docker compose down
 ```
-
-> Note: the redirect targets standard port 443 (`https://$host$request_uri`). If you publish HTTPS on a non-standard host port (like `8443` above), navigate to `https://localhost:8443` directly instead of following the redirect from port `8080`. In production, publish `80`/`443` directly (or terminate TLS at a load balancer) so the redirect works as expected.
 
 ### Deploying to a server / cloud
 
@@ -85,7 +68,6 @@ docker compose down
 ### Files
 
 - `Dockerfile` – multi-stage build (Node build stage + `nginx:alpine-slim` runtime stage) for a minimal image
-- `nginx.conf` – HTTP→HTTPS redirect, TLS termination (TLSv1.2/1.3), SPA fallback routing, and static asset caching
-- `docker-compose.yml` – local orchestration, maps host ports `8080`/`8443` to container `80`/`443` and mounts `./certs`
-- `scripts/generate-self-signed-cert.sh` – generates a local dev TLS certificate/key into `certs/`
-- `.dockerignore` – excludes `node_modules`, `dist`, `certs`, and other unneeded files from the build context
+- `nginx.conf` – SPA fallback routing and static asset caching
+- `docker-compose.yml` – local orchestration, maps host port `8080` to container port `80`
+- `.dockerignore` – excludes `node_modules`, `dist`, and other unneeded files from the build context
