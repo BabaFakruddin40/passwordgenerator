@@ -1,0 +1,23 @@
+services:
+  password-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: password-generator:latest
+    container_name: password-generator
+    ports:
+      - target: 80
+        published: 8080
+        protocol: tcp
+      - target: 443
+        published: 8443
+        protocol: tcp
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-check-certificate", "-qO-", "https://127.0.0.1:443"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
